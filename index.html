@@ -665,7 +665,9 @@
   .scanner-warning{
     font-size:12.5px; color:#8a5a10; background:#fff6e6; border:1px solid #f0d9a8;
     border-radius:10px; padding:9px 11px; margin-bottom:12px; line-height:1.5;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:8px;
   }
+  .scanner-warning .copy-link-btn{ margin-top:0; flex:0 0 auto; }
   .scanner-error{
     font-size:12.5px; color:#b5342a; background:#fdf2f2; border:1px solid #f3c9c9;
     border-radius:10px; padding:9px 11px; margin-bottom:12px; line-height:1.5; display:none;
@@ -923,6 +925,10 @@
     </div>
 
     <div class="scanner-counts" id="scannerCounts"></div>
+    <div class="scanner-warning" id="scannerMemoryWarning" style="display:none;">
+      <span id="scannerMemoryWarningText"></span>
+      <button class="copy-link-btn" id="scannerMemoryWarningDismiss">✕</button>
+    </div>
 
     <div class="scanner-controls">
       <button class="btn btn-primary" id="scannerDownloadBtn">⬇ Download scans (.zip)</button>
@@ -1131,7 +1137,8 @@ var PWHL_PARALLELS = {};
       scannerCapturedToast: "Photo scanned",
       scannerNoScansToast: "No scans to download yet",
       scannerClearedToast: "Scanned photos cleared",
-      scannerZipErrorToast: "Couldn't build the .zip — try again"
+      scannerZipErrorToast: "Couldn't build the .zip — try again",
+      scannerMemoryWarning: "{count} photos scanned this session — they're all held in your phone's memory until you download. Consider downloading now before scanning more."
     },
     fr: {
       loading: "Chargement de votre collection…",
@@ -1290,7 +1297,8 @@ var PWHL_PARALLELS = {};
       scannerCapturedToast: "Photo scannée",
       scannerNoScansToast: "Aucun scan à télécharger pour l'instant",
       scannerClearedToast: "Photos scannées effacées",
-      scannerZipErrorToast: "Impossible de créer le .zip — réessayez"
+      scannerZipErrorToast: "Impossible de créer le .zip — réessayez",
+      scannerMemoryWarning: "{count} photos scannées cette session — elles sont toutes conservées dans la mémoire de votre téléphone jusqu'au téléchargement. Pensez à télécharger maintenant avant d'en scanner davantage."
     }
   };
   function T(key){
@@ -1404,6 +1412,26 @@ var PWHL_PARALLELS = {};
   var scannerSessionTotal = 0;
   var scannerStream = null;
   var scannerAutoTimer = null;
+  var SCANNER_MEM_WARN_THRESHOLD = 200; // first nudge to download
+  var SCANNER_MEM_WARN_REPEAT = 100;    // then nudge again every N photos after that
+
+  function showScannerMemoryWarning(){
+    var el = document.getElementById('scannerMemoryWarning');
+    var textEl = document.getElementById('scannerMemoryWarningText');
+    if(!el || !textEl) return;
+    textEl.textContent = T('scannerMemoryWarning').replace('{count}', scannerSessionTotal);
+    el.style.display = 'flex';
+  }
+  function hideScannerMemoryWarning(){
+    var el = document.getElementById('scannerMemoryWarning');
+    if(el) el.style.display = 'none';
+  }
+  function maybeWarnAboutScannerMemory(){
+    var n = scannerSessionTotal;
+    if(n === SCANNER_MEM_WARN_THRESHOLD || (n > SCANNER_MEM_WARN_THRESHOLD && (n - SCANNER_MEM_WARN_THRESHOLD) % SCANNER_MEM_WARN_REPEAT === 0)){
+      showScannerMemoryWarning();
+    }
+  }
 
   function sanitizeForPath(s){
     var cleaned = String(s).trim().replace(/[\\\/\?<>:\*\|"]/g, '_');
@@ -1525,8 +1553,12 @@ var PWHL_PARALLELS = {};
     });
   }
 
-  function stopScannerAutoCapture(){
+  function clearScannerAutoTimer(){
     if(scannerAutoTimer){ clearInterval(scannerAutoTimer); scannerAutoTimer = null; }
+  }
+
+  function stopScannerAutoCapture(){
+    clearScannerAutoTimer();
     var autoToggle = document.getElementById('scannerAutoToggle');
     if(autoToggle) autoToggle.checked = false;
   }
@@ -1571,12 +1603,13 @@ var PWHL_PARALLELS = {};
       scannerCounters[key] = seq + 1;
       scannerSessionTotal++;
       refreshScannerCounts();
+      maybeWarnAboutScannerMemory();
       toast(T('scannerCapturedToast'));
     }, 'image/jpeg', 0.9);
   }
 
   function toggleScannerAutoCapture(on){
-    stopScannerAutoCapture();
+    clearScannerAutoTimer();
     if(on && scannerStream){
       scannerAutoTimer = setInterval(captureScannerFrame, 2500);
     }
@@ -1607,6 +1640,7 @@ var PWHL_PARALLELS = {};
     scannerCounters = {};
     scannerSessionTotal = 0;
     refreshScannerCounts();
+    hideScannerMemoryWarning();
     toast(T('scannerClearedToast'));
   }
 
@@ -3440,6 +3474,7 @@ var PWHL_PARALLELS = {};
   });
   document.getElementById('scannerDownloadBtn').addEventListener('click', downloadScannerZip);
   document.getElementById('scannerClearBtn').addEventListener('click', clearScannerCaptures);
+  document.getElementById('scannerMemoryWarningDismiss').addEventListener('click', hideScannerMemoryWarning);
   // Belt-and-suspenders: release the camera if the tab is hidden/closed while scanning,
   // since the overlay-close path is the main one but tab switches/navigations can bypass it.
   document.addEventListener('visibilitychange', function(){
