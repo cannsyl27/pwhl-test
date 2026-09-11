@@ -1,2 +1,2 @@
-# PWHL-Test
+# pwhl-test
 Test for PWHL App
