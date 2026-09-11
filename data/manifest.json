@@ -1,0 +1,60 @@
+{
+  "releases": [
+    {
+      "id": "UD2024",
+      "label": "UD 2024",
+      "group": "Flagship",
+      "file": "data/ud2024.json",
+      "order": 1,
+      "complete": true
+    },
+    {
+      "id": "UD2024-2025",
+      "label": "UD 2024-25",
+      "group": "Flagship",
+      "file": "data/ud2024-2025.json",
+      "order": 2,
+      "complete": true
+    },
+    {
+      "id": "UD2025-2026",
+      "label": "UD 2025-26",
+      "group": "Flagship",
+      "file": "data/ud2025-2026.json",
+      "order": 3,
+      "complete": true
+    },
+    {
+      "id": "FU2025-2026",
+      "label": "FU 2025-26",
+      "group": "Flagship",
+      "file": "data/fu2025-2026.json",
+      "order": 4,
+      "complete": true
+    },
+    {
+      "id": "Showcase2024-2025",
+      "label": "PWHL Showcase 2024-25",
+      "group": "Showcase",
+      "file": "data/showcase2024-2025.json",
+      "order": 5,
+      "complete": true
+    },
+    {
+      "id": "Showcase2025-2026",
+      "label": "PWHL Showcase 2025-26",
+      "group": "Showcase",
+      "file": "data/showcase2025-2026.json",
+      "order": 6,
+      "complete": false
+    },
+    {
+      "id": "Specialty",
+      "label": "Specialty / One-Offs",
+      "group": "Specialty",
+      "file": "data/specialty.json",
+      "order": 7,
+      "complete": false
+    }
+  ]
+}
