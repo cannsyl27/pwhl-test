@@ -46,7 +46,7 @@
       "group": "Showcase",
       "file": "data/showcase2025-2026.json",
       "order": 6,
-      "complete": false
+      "complete": true
     },
     {
       "id": "Specialty",
