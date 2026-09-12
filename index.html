@@ -2741,23 +2741,41 @@ var PWHL_PARALLELS = {};
     return canvas.toDataURL('image/jpeg', quality);
   }
 
-  function processPhotoFile(file, cs){
+  function savePhotoFromSource(source, cs){
+    // Full version (640px @ 80%) is only ever decoded on demand in the lightbox.
+    // Grid thumbnail (100px @ 70%) is what actually renders while scrolling a set —
+    // keeping it tiny is what lets a long list of photographed cards scroll smoothly
+    // instead of the browser decoding hundreds of full-size images at once.
+    cs.img = resizedJpeg(source, 640, 0.8);
+    cs.thumb = resizedJpeg(source, 100, 0.7);
+    if(source.close) source.close(); // release the ImageBitmap's memory once we're done with it
+    renderAll();
+    if(lightboxCurrentCs === cs) updateLightboxImage();
+  }
+
+  function processPhotoFileLegacy(file, cs){
     var reader = new FileReader();
     reader.onload = function(ev){
       var image = new Image();
-      image.onload = function(){
-        // Full version (640px @ 80%) is only ever decoded on demand in the lightbox.
-        // Grid thumbnail (100px @ 70%) is what actually renders while scrolling a set —
-        // keeping it tiny is what lets a long list of photographed cards scroll smoothly
-        // instead of the browser decoding hundreds of full-size images at once.
-        cs.img = resizedJpeg(image, 640, 0.8);
-        cs.thumb = resizedJpeg(image, 100, 0.7);
-        renderAll();
-        if(lightboxCurrentCs === cs) updateLightboxImage();
-      };
+      image.onload = function(){ savePhotoFromSource(image, cs); };
       image.src = ev.target.result;
     };
     reader.readAsDataURL(file);
+  }
+
+  function processPhotoFile(file, cs){
+    // Phone photos are usually stored sideways with an EXIF tag saying how to rotate
+    // them for display — normal <img> tags respect that automatically, but drawing
+    // straight to <canvas> (the old path here) ignores it and bakes in the sideways
+    // orientation permanently. createImageBitmap's imageOrientation option decodes
+    // the photo already rotated correctly, before it ever touches a canvas.
+    if(window.createImageBitmap){
+      createImageBitmap(file, {imageOrientation: 'from-image'})
+        .then(function(bitmap){ savePhotoFromSource(bitmap, cs); })
+        .catch(function(){ processPhotoFileLegacy(file, cs); });
+    } else {
+      processPhotoFileLegacy(file, cs);
+    }
   }
 
   function updateLightboxImage(){
