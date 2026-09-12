@@ -556,6 +556,30 @@
     background:#f2ecff; padding:2px 7px; border-radius:6px; margin-right:6px;
   }
 
+  /* ---------- Photo lightbox ---------- */
+  .photo-lightbox-close{
+    position:fixed; top:16px; right:16px; width:36px; height:36px; border-radius:50%;
+    background:rgba(255,255,255,0.15); color:white; border:none; font-size:18px;
+    cursor:pointer; z-index:101; display:flex; align-items:center; justify-content:center;
+  }
+  .photo-lightbox-content{
+    position:relative; max-width:92vw; max-height:82vh;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+  }
+  .photo-lightbox-content img{
+    max-width:92vw; max-height:65vh; border-radius:12px; object-fit:contain;
+    box-shadow:0 8px 30px rgba(0,0,0,0.4);
+  }
+  .photo-lightbox-actions{ display:flex; gap:10px; }
+  .photo-lightbox-actions button{
+    padding:10px 18px; border-radius:10px; border:none; font-weight:700;
+    font-size:13.5px; cursor:pointer;
+  }
+  .photo-lightbox-actions .change-btn{ background:var(--violet); color:white; }
+  .photo-lightbox-actions .remove-btn{
+    background:rgba(255,255,255,0.12); color:#ff9b9b; border:1px solid rgba(255,80,80,0.4);
+  }
+
   /* ---------- Settings modal ---------- */
   .overlay{
     position:fixed; inset:0; background: rgba(15,20,40,0.5);
@@ -939,6 +963,17 @@
   </div>
 </div>
 
+<div class="overlay" id="photoLightbox">
+  <button class="photo-lightbox-close" id="closeLightbox">✕</button>
+  <div class="photo-lightbox-content">
+    <img id="lightboxImg" src="" alt="Card photo">
+    <div class="photo-lightbox-actions">
+      <button class="change-btn" id="lightboxChangeBtn"></button>
+      <button class="remove-btn" id="lightboxRemoveBtn"></button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="shareOverlay">
   <div class="modal modal-wrap share-modal">
     <button class="modal-close" id="closeShare">✕</button>
@@ -1039,6 +1074,8 @@ var PWHL_PARALLELS = {};
       baseCardsCheckedOff: " base cards checked off across all sets",
       of: " of ",
       removePhotoConfirm: "Remove this photo?",
+      lightboxChangeBtn: "Change photo",
+      lightboxRemoveBtn: "Remove photo",
       resetAllConfirm: "Clear every checkmark, chase flag, double, photo, and card correction? This cannot be undone unless you have a downloaded backup.",
       langToggleTitle: "Switch to French / Passer au français",
       noMatchesTitle: "No matches",
@@ -1199,6 +1236,8 @@ var PWHL_PARALLELS = {};
       baseCardsCheckedOff: " cartes de base cochées sur tous les sets",
       of: " sur ",
       removePhotoConfirm: "Supprimer cette photo ?",
+      lightboxChangeBtn: "Changer la photo",
+      lightboxRemoveBtn: "Supprimer la photo",
       resetAllConfirm: "Effacer chaque coche, indicateur de recherche, double, photo et correction de carte ? Cette action est irréversible, sauf si vous avez téléchargé une sauvegarde.",
       langToggleTitle: "Passer à l'anglais / Switch to English",
       noMatchesTitle: "Aucun résultat",
@@ -1354,6 +1393,8 @@ var PWHL_PARALLELS = {};
     if((el = document.getElementById('openScannerBtn'))) el.textContent = T('openScannerBtn');
     applyScannerI18n();
     applyBackupReminderI18n();
+    if((el = document.getElementById('lightboxChangeBtn'))) el.textContent = T('lightboxChangeBtn');
+    if((el = document.getElementById('lightboxRemoveBtn'))) el.textContent = T('lightboxRemoveBtn');
     if((el = document.getElementById('shareSelectAllBtn'))) el.textContent = T('selectAll');
     if((el = document.getElementById('shareSelectNoneBtn'))) el.textContent = T('selectNone');
     if((el = document.getElementById('shareContinueBtn'))) el.textContent = T('continueBuildImage');
@@ -2689,13 +2730,59 @@ var PWHL_PARALLELS = {};
     return '<svg width="12" height="12" viewBox="0 0 24 24" fill="'+(filled?'currentColor':'none')+'" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"></path><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path><path d="m3.3 7 8.7 5 8.7-5"></path><path d="M12 22V12"></path></svg>';
   }
 
+  var lightboxCurrentCs = null;
+
+  function resizedJpeg(image, maxW, quality){
+    var scale = Math.min(1, maxW/image.width);
+    var canvas = document.createElement('canvas');
+    canvas.width = image.width*scale;
+    canvas.height = image.height*scale;
+    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', quality);
+  }
+
+  function processPhotoFile(file, cs){
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      var image = new Image();
+      image.onload = function(){
+        // Full version (640px @ 80%) is only ever decoded on demand in the lightbox.
+        // Grid thumbnail (100px @ 70%) is what actually renders while scrolling a set —
+        // keeping it tiny is what lets a long list of photographed cards scroll smoothly
+        // instead of the browser decoding hundreds of full-size images at once.
+        cs.img = resizedJpeg(image, 640, 0.8);
+        cs.thumb = resizedJpeg(image, 100, 0.7);
+        renderAll();
+        if(lightboxCurrentCs === cs) updateLightboxImage();
+      };
+      image.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateLightboxImage(){
+    var imgEl = document.getElementById('lightboxImg');
+    if(imgEl && lightboxCurrentCs) imgEl.src = lightboxCurrentCs.img;
+  }
+  function openPhotoLightbox(cs){
+    lightboxCurrentCs = cs;
+    updateLightboxImage();
+    document.getElementById('photoLightbox').classList.add('open');
+  }
+  function closePhotoLightbox(){
+    document.getElementById('photoLightbox').classList.remove('open');
+    lightboxCurrentCs = null;
+  }
+
   function makeThumb(setKey, type, card, cs){
     var wrap = document.createElement('div');
     wrap.className = 'thumb';
-    wrap.title = 'Add your own photo of this card';
+    wrap.title = cs.img ? 'Tap to view larger, or to change/remove it' : 'Add your own photo of this card';
     if(cs.img){
       var img = document.createElement('img');
-      img.src = cs.img;
+      img.src = cs.thumb || cs.img; // fall back to full image for photos saved before thumbnails existed
+      img.loading = 'lazy';
+      img.decoding = 'async';
       wrap.appendChild(img);
     } else {
       wrap.innerHTML = '<span class="plus">+</span>';
@@ -2705,34 +2792,21 @@ var PWHL_PARALLELS = {};
     input.accept = 'image/*';
     input.addEventListener('change', function(e){
       var file = e.target.files[0];
-      if(!file) return;
-      var reader = new FileReader();
-      reader.onload = function(ev){
-        var image = new Image();
-        image.onload = function(){
-          var maxW = 160;
-          var scale = Math.min(1, maxW/image.width);
-          var canvas = document.createElement('canvas');
-          canvas.width = image.width*scale;
-          canvas.height = image.height*scale;
-          var ctx = canvas.getContext('2d');
-          ctx.drawImage(image,0,0,canvas.width,canvas.height);
-          cs.img = canvas.toDataURL('image/jpeg', 0.72);
-          renderAll();
-        };
-        image.src = ev.target.result;
-      };
-      reader.readAsDataURL(file);
+      if(file) processPhotoFile(file, cs);
     });
     wrap.appendChild(input);
     wrap.addEventListener('click', function(e){
       e.stopPropagation();
-      input.click();
+      if(cs.img){
+        openPhotoLightbox(cs);
+      } else {
+        input.click();
+      }
     });
     if(cs.img){
       wrap.addEventListener('contextmenu', function(e){
         e.preventDefault();
-        if(confirm(T('removePhotoConfirm'))){ cs.img = null; renderAll(); }
+        if(confirm(T('removePhotoConfirm'))){ cs.img = null; cs.thumb = null; renderAll(); }
       });
     }
     return wrap;
@@ -3475,6 +3549,32 @@ var PWHL_PARALLELS = {};
   document.getElementById('scannerDownloadBtn').addEventListener('click', downloadScannerZip);
   document.getElementById('scannerClearBtn').addEventListener('click', clearScannerCaptures);
   document.getElementById('scannerMemoryWarningDismiss').addEventListener('click', hideScannerMemoryWarning);
+
+  // ---------- Photo lightbox ----------
+  var photoLightboxEl = document.getElementById('photoLightbox');
+  document.getElementById('closeLightbox').addEventListener('click', closePhotoLightbox);
+  photoLightboxEl.addEventListener('click', function(e){
+    if(e.target === photoLightboxEl) closePhotoLightbox();
+  });
+  document.getElementById('lightboxChangeBtn').addEventListener('click', function(){
+    if(!lightboxCurrentCs) return;
+    var tempInput = document.createElement('input');
+    tempInput.type = 'file';
+    tempInput.accept = 'image/*';
+    tempInput.addEventListener('change', function(e){
+      var file = e.target.files[0];
+      if(file) processPhotoFile(file, lightboxCurrentCs);
+    });
+    tempInput.click();
+  });
+  document.getElementById('lightboxRemoveBtn').addEventListener('click', function(){
+    if(lightboxCurrentCs && confirm(T('removePhotoConfirm'))){
+      lightboxCurrentCs.img = null;
+      lightboxCurrentCs.thumb = null;
+      closePhotoLightbox();
+      renderAll();
+    }
+  });
   // Belt-and-suspenders: release the camera if the tab is hidden/closed while scanning,
   // since the overlay-close path is the main one but tab switches/navigations can bypass it.
   document.addEventListener('visibilitychange', function(){
