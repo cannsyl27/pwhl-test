@@ -55,6 +55,38 @@
       "file": "data/specialty.json",
       "order": 7,
       "complete": false
+    },
+    {
+      "id": "TimHortonsTeamCanada2021-2022",
+      "label": "Tim Hortons Team Canada 2021-22",
+      "group": "Specialty",
+      "file": "data/timhortonsteamcanada2021-2022.json",
+      "order": 8,
+      "complete": false
+    },
+    {
+      "id": "TimHortonsGreatestDuos2023-2024",
+      "label": "Tim Hortons Greatest Duos 2023-24",
+      "group": "Specialty",
+      "file": "data/timhortonsgreatestduos2023-2024.json",
+      "order": 9,
+      "complete": false
+    },
+    {
+      "id": "TimHortonsRetroRookies2024-2025",
+      "label": "Tim Hortons Retrospective Rookies 2024-25",
+      "group": "Specialty",
+      "file": "data/timhortonsretrorookies2024-2025.json",
+      "order": 10,
+      "complete": false
+    },
+    {
+      "id": "TimHortonsCanada2025-2026",
+      "label": "Tim Hortons Team Canada 2025-26",
+      "group": "Specialty",
+      "file": "data/timhortonscanada2025-2026.json",
+      "order": 11,
+      "complete": false
     }
   ]
 }
