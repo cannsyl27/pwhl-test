@@ -261,10 +261,13 @@
     flex:1 1 auto; min-width:0;
     display:flex; align-items:center; gap:8px;
   }
-  .release-bar-btn .release-label{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .release-bar-btn .release-label{
+    flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    text-transform:uppercase; font-weight:800; font-style:italic; letter-spacing:0.3px;
+  }
   .release-bar-btn .count-pill{
-    font-size:10.5px; background: rgba(224,169,53,0.28); color: var(--gold);
-    padding: 1px 6px; border-radius: 999px; font-weight:700; flex:0 0 auto;
+    font-size:10.5px; color:#1b1200;
+    padding: 1px 7px; border-radius: 999px; font-weight:800; flex:0 0 auto;
   }
   .release-bar-btn .picker-chevron{ font-size:11px; opacity:.85; margin-left:auto; flex:0 0 auto; }
   .tab{
@@ -359,16 +362,6 @@
 
   /* ---------- Content ---------- */
   main{ padding: 18px 14px 40px; }
-
-  .set-progress{
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:16px;
-    background:white; border:1px solid var(--line); border-radius:12px;
-    padding:12px 14px;
-    box-shadow: var(--shadow);
-  }
-  .set-progress .label{ font-size:13px; color:var(--muted); }
-  .set-progress .value{ font-size:15px; font-weight:700; color:var(--navy); }
 
   .type-section{
     margin-bottom: 22px;
@@ -2311,14 +2304,19 @@ var PWHL_PARALLELS = {};
     releaseBtn.className = 'release-bar-btn';
     var curLabel = SET_LABELS[lastReleaseTab] || lastReleaseTab || '…';
     var curCount = '…';
+    var curPct = 0;
     if(loadedReleaseIds[lastReleaseTab]){
       var t2 = setTotals(lastReleaseTab);
-      curCount = t2.have + '/' + t2.total;
+      curPct = t2.total ? Math.round(100*t2.have/t2.total) : 0;
+      curCount = t2.have + '/' + t2.total + ' · ' + curPct + '%';
     }
+    // Pill fill is a hard-edge two-tone gradient standing in for a tiny progress
+    // bar — solid gold up to the completion percentage, faint gold beyond it.
+    var pillFillStyle = 'background: linear-gradient(to right, var(--gold) '+curPct+'%, rgba(224,169,53,0.28) '+curPct+'%)';
     releaseBtn.innerHTML = '<img class="release-badge-icon" src="tab-releases.jpg" alt="" loading="lazy">'
       + '<span class="release-bar-content">'
       + '<span class="release-label">'+curLabel+'</span>'
-      + '<span class="count-pill">'+curCount+'</span>'
+      + '<span class="count-pill" style="'+pillFillStyle+'">'+curCount+'</span>'
       + '<span class="picker-chevron">▾</span>'
       + '</span>';
     releaseBtn.addEventListener('click', function(){ openSetsPicker(); });
@@ -3168,14 +3166,6 @@ var PWHL_PARALLELS = {};
       wrap.innerHTML = '<div class="empty-state"><div class="glyph">🗂️</div><h4>'+T('emptyReleaseTitle')+'</h4><p>'+T('emptyReleaseDesc')+'</p></div>';
       return wrap;
     }
-
-    var totals = setTotals(setKey);
-    var pct = totals.total ? Math.round(100*totals.have/totals.total) : 0;
-
-    var prog = document.createElement('div');
-    prog.className = 'set-progress';
-    prog.innerHTML = '<span class="label">'+SET_LABELS[setKey]+' collected</span><span class="value">'+totals.have+' / '+totals.total+' ('+pct+'%)</span>';
-    wrap.appendChild(prog);
 
     var typeKeys = PWHL_SETS[setKey].map(function(pair){ return setKey+'|'+pair[0]; });
     var allCollapsed = typeKeys.length > 0 && typeKeys.every(function(k){ return !!collapsed[k]; });
