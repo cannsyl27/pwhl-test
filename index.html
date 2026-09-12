@@ -237,11 +237,8 @@
     display:flex;
     gap:6px;
     padding: 12px 14px 0;
-    overflow-x:auto;
     background: var(--navy-2);
-    scrollbar-width: none;
   }
-  .tabs::-webkit-scrollbar{display:none;}
   .release-bar{
     background: var(--navy-2);
     padding: 0 14px 12px;
@@ -252,16 +249,20 @@
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.18);
     border-radius: 10px;
-    padding: 10px 12px;
+    padding: 8px 12px;
     font-size: 13.5px; font-weight:700; color:white;
     cursor:pointer;
   }
   .release-bar-btn:hover{ background: rgba(255,255,255,0.16); }
+  .release-bar-btn .release-badge-icon{
+    height: 26px; width:auto; border-radius:6px; flex:0 0 auto; display:block;
+  }
+  .release-bar-btn .release-label{ flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .release-bar-btn .count-pill{
     font-size:10.5px; background: rgba(224,169,53,0.28); color: var(--gold);
-    padding: 1px 6px; border-radius: 999px; font-weight:700;
+    padding: 1px 6px; border-radius: 999px; font-weight:700; flex:0 0 auto;
   }
-  .release-bar-btn .picker-chevron{ font-size:11px; opacity:.85; margin-left:auto; }
+  .release-bar-btn .picker-chevron{ font-size:11px; opacity:.85; margin-left:auto; flex:0 0 auto; }
   .tab{
     flex: 0 0 auto;
     padding: 9px 14px 11px;
@@ -286,10 +287,34 @@
     color: white;
     border-bottom-color: var(--gold);
   }
-  .tab.special{ }
+  /* Missing/Chase/Doubles: the graphics ARE the buttons — three equal-width
+     tiles that always fit across the screen (no horizontal scrolling), with
+     the count shown as a badge overlaid on the corner instead of inline text. */
+  .tab.special{
+    position:relative;
+    flex: 1 1 0; min-width:0;
+    padding:0; border:none; border-bottom:none;
+    border-radius:10px;
+    opacity:0.55;
+    transform: scale(0.97);
+    transition: opacity .15s ease, transform .15s ease;
+  }
+  .tab.special img{
+    width:100%; height:auto; display:block;
+    border-radius:10px;
+  }
+  .tab.special.active{
+    opacity:1;
+    transform:scale(1);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.55);
+  }
   .tab.special .count-pill{
-    background: rgba(224,169,53,0.22);
-    color: var(--gold);
+    position:absolute; top:-6px; right:-5px;
+    background: var(--gold); color:#1b1200;
+    font-size:10px; font-weight:800; line-height:1;
+    padding:3px 6px; border-radius:999px;
+    border:1.5px solid var(--navy-2);
+    box-shadow:0 1px 3px rgba(0,0,0,0.4);
   }
   .tab.release-picker-btn{
     background: rgba(255,255,255,0.08);
@@ -1135,7 +1160,7 @@ var PWHL_PARALLELS = {};
       ht_collapse_t: "Collapsing sections",
       ht_collapse_d: "Tap any section header (like \"Base\" or \"Young Guns\") to collapse or expand just that list — or use the \"Collapse all / Expand all\" button at the top of a set tab to do it for the whole page at once.",
       ht_setspicker_t: "Finding a release",
-      ht_setspicker_d: "Tap the \"📚 [release name]\" button to open a searchable list of every release, grouped by Flagship, Showcase, and Specialty. Pick one to jump straight to it — no more scrolling through a long row of tabs.",
+      ht_setspicker_d: "Tap the release bar (below the tabs) to open a searchable list of every release, grouped by Flagship, Showcase, and Specialty. Pick one to jump straight to it — no more scrolling through a long row of tabs.",
       ht_scanner_t: "Box Scanner",
       ht_scanner_d: "In Settings, use the Box Scanner to photograph a whole stack of cards with your camera, then download them all as a .zip sorted by release and subset. It doesn't attach photos to individual cards for you — you'll sort and attach them yourself afterward.",
       setsPickerHeading: "Sets",
@@ -1297,7 +1322,7 @@ var PWHL_PARALLELS = {};
       ht_collapse_t: "Réduire les sections",
       ht_collapse_d: "Touchez l'en-tête d'une section (comme « Base » ou « Young Guns ») pour réduire ou développer juste cette liste — ou utilisez le bouton « Tout réduire / Tout développer » en haut d'un onglet de set pour le faire pour toute la page en une fois.",
       ht_setspicker_t: "Trouver une édition",
-      ht_setspicker_d: "Touchez le bouton « 📚 [nom de l'édition] » pour ouvrir une liste consultable de toutes les éditions, groupées par Phare, Showcase et Spécialité. Choisissez-en une pour y aller directement — plus besoin de faire défiler une longue rangée d'onglets.",
+      ht_setspicker_d: "Touchez la barre d'édition (sous les onglets) pour ouvrir une liste consultable de toutes les éditions, groupées par Phare, Showcase et Spécialité. Choisissez-en une pour y aller directement — plus besoin de faire défiler une longue rangée d'onglets.",
       ht_scanner_t: "Scanner de cartes",
       ht_scanner_d: "Dans les Paramètres, utilisez le Scanner de cartes pour photographier toute une pile de cartes avec votre caméra, puis téléchargez-les sous forme de .zip trié par édition et sous-ensemble. Il n'associe pas les photos aux cartes individuelles pour vous — vous les trierez et les associerez vous-même ensuite.",
       setsPickerHeading: "Sets",
@@ -2243,6 +2268,7 @@ var PWHL_PARALLELS = {};
 
   function renderTabs(){
     tabsEl.innerHTML = '';
+    var TAB_ICONS = { MISSING:'tab-missing.jpg', CHASE:'tab-chase.jpg', DOUBLES:'tab-doubles.jpg' };
     ["MISSING","CHASE","DOUBLES"].forEach(function(tabKey){
       var btn = document.createElement('button');
       btn.className = 'tab special' + (tabKey===activeTab && !searchQuery.trim() ? ' active' : '');
@@ -2257,7 +2283,9 @@ var PWHL_PARALLELS = {};
         label = T('tabMissing');
         count = countMissing();
       }
-      btn.innerHTML = '<span>'+label+'</span><span class="count-pill">'+count+'</span>';
+      btn.innerHTML = '<img src="'+TAB_ICONS[tabKey]+'" alt="" loading="lazy"><span class="count-pill">'+count+'</span>';
+      btn.setAttribute('aria-label', label);
+      btn.title = label;
       btn.addEventListener('click', function(){
         setActiveTab(tabKey);
         searchQuery = '';
@@ -2271,6 +2299,8 @@ var PWHL_PARALLELS = {};
     // instead of a tab per release, since that list only grows over time.
     // Lives in its own full-width bar (not the horizontally-scrolling tabs
     // strip above) so it's always visible, never hidden behind a swipe.
+    // The badge icon is a fixed visual "this opens a dropdown" indicator —
+    // the release name/count next to it is what actually changes per release.
     var releaseBar = document.getElementById('releaseBar');
     releaseBar.innerHTML = '';
     var releaseBtn = document.createElement('button');
@@ -2281,7 +2311,10 @@ var PWHL_PARALLELS = {};
       var t2 = setTotals(lastReleaseTab);
       curCount = t2.have + '/' + t2.total;
     }
-    releaseBtn.innerHTML = '<span>📚 '+curLabel+'</span><span class="count-pill">'+curCount+'</span><span class="picker-chevron">▾</span>';
+    releaseBtn.innerHTML = '<img class="release-badge-icon" src="tab-releases.jpg" alt="" loading="lazy">'
+      + '<span class="release-label">'+curLabel+'</span>'
+      + '<span class="count-pill">'+curCount+'</span>'
+      + '<span class="picker-chevron">▾</span>';
     releaseBtn.addEventListener('click', function(){ openSetsPicker(); });
     releaseBar.appendChild(releaseBtn);
   }
